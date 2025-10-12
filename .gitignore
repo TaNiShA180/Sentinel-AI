@@ -1,0 +1,20 @@
+# .gitignore
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary and evidence folders
+/evidence/
+/temp_files/
+
+# IDE folders
+.vscode/
+.idea/
+
+# Virtual environment folder (if you use one)
+venv/
+*.venv/
