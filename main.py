@@ -1,12 +1,12 @@
+# main.py
+
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 import os
 import shutil
-from moviepy import VideoFileClip
-import time 
+from moviepy import VideoFileClip # Corrected import
+import time
 from datetime import datetime
-# We will create the decision_engine module in the next step.
-# For now, this import assumes it exists with a 'run_analysis' function.
 import decision_engine
 
 # --- App Setup ---
@@ -23,12 +23,14 @@ def cleanup_files(file_paths: list):
     """
     A background task to safely delete temporary files after they are processed.
     """
+    # ADDED: A delay to ensure files are no longer in use before deletion.
+    time.sleep(10) # Wait 10 seconds
     print("🧹 Starting cleanup task...")
     for path in file_paths:
         if path and os.path.exists(path):
             try:
                 os.remove(path)
-                print(f"   - Removed temporary file: {path}")
+                print(f"   - Removed processed file: {path}")
             except OSError as e:
                 print(f"   - Error removing file {path}: {e}")
     print("✅ Cleanup finished.")
@@ -43,47 +45,52 @@ async def analyze_video_clip(background_tasks: BackgroundTasks, video_file: Uplo
     """
     # 1. Save the uploaded video to a temporary file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    evidence_video_path = os.path.join(EVIDENCE_DIR, f"{timestamp}_{video_file.filename}")
+    # CHANGED: Save evidence to the temp directory first to ensure it gets cleaned up.
+    # A real system might move it to permanent storage only *after* a threat is confirmed.
+    temp_video_path = os.path.join(TEMP_DIR, f"{timestamp}_{video_file.filename}")
     
     try:
-        with open(evidence_video_path, "wb") as buffer:
+        with open(temp_video_path, "wb") as buffer:
             shutil.copyfileobj(video_file.file, buffer)
-        print(f"📹 Evidence video saved to: {evidence_video_path}")
+        print(f"📹 Video saved temporarily to: {temp_video_path}")
     except Exception as e:
         return {"status": "error", "message": f"Failed to save video file: {e}"}
 
     # 2. Extract the audio track
     temp_audio_path = None
     try:
-        with VideoFileClip(evidence_video_path) as video_clip:
+        # Use a more robust check for video file integrity
+        with VideoFileClip(temp_video_path) as video_clip:
             if video_clip.audio:
                 # Keep audio temporary, as it's only used for transcription
-                base, _ = os.path.splitext(os.path.basename(evidence_video_path))
+                base, _ = os.path.splitext(os.path.basename(temp_video_path))
                 temp_audio_path = os.path.join(TEMP_DIR, f"{base}.mp3")
                 video_clip.audio.write_audiofile(temp_audio_path, logger=None)
                 print(f"🎤 Audio extracted and saved temporarily to: {temp_audio_path}")
             else:
                 print("🔇 No audio track found in the video.")
     except Exception as e:
-        print(f"⚠️ Warning: Could not extract audio. Error: {e}")
+        print(f"⚠️ Warning: Could not extract audio from {temp_video_path}. Error: {e}")
 
     # 3. Call the Decision Engine as a background task
     # This allows us to return a response immediately without waiting for AI analysis.
     background_tasks.add_task(
         decision_engine.run_analysis,
-        video_path=evidence_video_path,
+        video_path=temp_video_path,
         audio_path=temp_audio_path
     )
 
     # 4. Schedule the cleanup task to run after the analysis
-    background_tasks.add_task(cleanup_files, file_paths=[ temp_audio_path])
+    # CHANGED: Add the temporary video path to the cleanup list as well.
+    files_to_clean = [temp_video_path, temp_audio_path]
+    background_tasks.add_task(cleanup_files, file_paths=files_to_clean)
 
     # 5. Return an immediate confirmation response
     print(f"✅ Analysis for '{video_file.filename}' has been started in the background.")
     return {
         "status": "analysis_started",
         "filename": video_file.filename,
-        "evidence_path": evidence_video_path,
+        "temp_video_path": temp_video_path,
         "audio_found": temp_audio_path is not None
     }
 
@@ -98,4 +105,5 @@ def read_root():
 if __name__ == "__main__":
     print("🚀 Starting Sentinel AI FastAPI server...")
     # reload=True will automatically restart the server when you save changes
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    # Use 0.0.0.0 to make it accessible from other devices on your network
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

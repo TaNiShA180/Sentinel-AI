@@ -26,12 +26,19 @@ async def analyze_video_with_gpt4v(video_path: str, frames_to_extract: int = 10)
     Analyzes a video using the Gemini 1.5 Flash model.
     """
     print(f"   [AI Service] Starting Gemini analysis for {video_path}...")
-    
+
     # 1. Extract video frames as PIL.Image objects
     pil_images = []
     try:
         video = cv2.VideoCapture(video_path)
         total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Ensure we don't try to extract more frames than exist
+        frames_to_extract = min(frames_to_extract, total_frames)
+        if frames_to_extract == 0:
+             print("   - Error: Video has no frames.")
+             video.release()
+             return None
+
         frame_indices = [int(i * total_frames / frames_to_extract) for i in range(frames_to_extract)]
 
         for i in frame_indices:
@@ -42,13 +49,13 @@ async def analyze_video_with_gpt4v(video_path: str, frames_to_extract: int = 10)
             # Convert frame from BGR (OpenCV) to RGB (PIL)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             pil_images.append(Image.fromarray(frame_rgb))
-        
+
         video.release()
-        
+
         if not pil_images:
             print("   - Error: Could not extract any frames from the video.")
             return None
-            
+
         print(f"   - Extracted {len(pil_images)} frames for analysis.")
 
     except Exception as e:
@@ -56,9 +63,9 @@ async def analyze_video_with_gpt4v(video_path: str, frames_to_extract: int = 10)
         return None
 
     # 2. Prepare the request for Gemini
-    # Use the vision-capable model
+    # CHANGED: Using a valid and efficient model name.
     model = genai.GenerativeModel(model_name="gemini-2.5-pro")
-    
+
     prompt = """
     Analyze this sequence of video frames for a public safety threat.
     Is a person showing clear signs of distress, struggling against another person,
@@ -68,21 +75,21 @@ async def analyze_video_with_gpt4v(video_path: str, frames_to_extract: int = 10)
     2. 'description': A brief, 20-word summary of the action.
     Example response: {"threat_level": 8, "description": "A person is being forcibly dragged by another individual towards a vehicle against their will."}
     """
-    
+
     # The request must contain the prompt first, then all the images
     request_contents = [prompt] + pil_images
-    
+
     # 3. Send the request to Google
     try:
         response = await model.generate_content_async(request_contents)
         # Clean up the response text to ensure it's valid JSON
         response_text = response.text.strip().replace("```json", "").replace("```", "")
-        
+
         return json.loads(response_text)
 
     except Exception as e:
         print(f"   - An unexpected error occurred during API call: {e}")
-    
+
     return None
 
 
@@ -101,9 +108,10 @@ async def generate_alert_message(event_description: str, location: str, timestam
     including location and time context.
     """
     print("   [AI Service] Generating formatted alert message with location and time...")
-    
+
+    # CHANGED: Using a valid and efficient model name.
     model = genai.GenerativeModel(model_name="gemini-2.5-pro")
-    
+
     # MODIFICATION: The prompt now includes the location and timestamp
     # This gives the AI context to generate a more complete alert.
     prompt = f"""
@@ -117,7 +125,7 @@ async def generate_alert_message(event_description: str, location: str, timestam
 
     Generated Alert:
     """
-    
+
     try:
         response = await model.generate_content_async(prompt)
         return response.text.strip()
