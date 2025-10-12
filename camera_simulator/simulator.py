@@ -8,7 +8,7 @@ import numpy as np
 # --- Configuration ---
 # Set to 0 for webcam, or provide a path to a video file e.g., "test_videos/street.mp4"
 VIDEO_SOURCE =  "test_videos/kiddnapping-simulation.mp4"
-BACKEND_URL = "http://127.0.0.1:8000/analyze"
+BACKEND_URL = "https://sentinel-ai-proactive-public-safety.onrender.com"
 
 # Frame settings
 FRAME_WIDTH = 640
