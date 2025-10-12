@@ -1,3 +1,14 @@
+
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/8f0fd74a-f2dd-4a67-a011-915a45027f66" />
+
+
+![Image](https://github.com/user-attachments/assets/e1fd883f-b2c5-4417-a267-70a1ab908e35)
+
+
+https://github.com/user-attachments/assets/28bcfea5-fff9-4af0-8d80-2b8e26fb96c4
+
+
+
 🚨 Sentinel AI: Proactive Threat Detection System
 Sentinel AI is a proof-of-concept security system that leverages computer vision and generative AI to proactively detect potential public safety threats from a video feed. It captures motion-activated video clips, analyzes them in near real-time for signs of distress or assault, and automatically dispatches alerts to designated contacts via SMS and email.
 
