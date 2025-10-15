@@ -189,4 +189,4 @@ Unauthorized use for surveillance or privacy invasion is strictly prohibited.
 
 👩‍💻 Author
 Tanisha Vasudeva
-🌐 AI & ML Developer | Computer Vision Enthusiast
+🌐 AI & ML Enthusiast | Computer Vision Enthusiast
